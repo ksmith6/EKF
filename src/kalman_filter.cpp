@@ -12,6 +12,10 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
   H_ = H_in;
   R_ = R_in;
   Q_ = Q_in;
+
+  // TODO - Re-do Init() to accept R_laser_ and R_radar_.
+  R_laser_ = MatrixXd(2,2);
+  R_radar_ = MatrixXd(3,3);
 }
 
 void KalmanFilter::Predict() {
@@ -26,7 +30,7 @@ void KalmanFilter::Predict() {
 
 void KalmanFilter::Update(const VectorXd &z) {
   /**
-  TODO:
+    This is the LASER measurement processing.
     * update the state by using Kalman Filter equations
   */
   VectorXd z_pred = H_ * x_;
@@ -51,12 +55,13 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   */
 
   // TODO: 
-  // Hj = ComputeJacobian();
+  Tools tools = new Tools();
+  MatrixXd Hj = tools.CalculateJacobian(x_); 
 
-  VectorXd z_pred = H_ * x_;
+  VectorXd z_pred = Hj * x_;
   VectorXd y = z - z_pred;
-  MatrixXd Ht = H_.transpose();
-  MatrixXd S = H_ * P_ * Ht + R_;
+  MatrixXd Ht = Hj.transpose();
+  MatrixXd S = Hj * P_ * Ht + R_;
   MatrixXd Si = S.inverse();
   MatrixXd PHt = P_ * Ht;
   MatrixXd K = PHt * Si;
@@ -69,6 +74,3 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
 
 }
 
-MatrixXd KalmanFilter::ComputeJacobian() {
-  // TODO
-}
