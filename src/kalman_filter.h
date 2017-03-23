@@ -1,7 +1,7 @@
 #ifndef KALMAN_FILTER_H_
 #define KALMAN_FILTER_H_
 #include "Eigen/Dense"
-
+#include "tools.h"
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
@@ -20,11 +20,21 @@ public:
   // process covariance matrix
   MatrixXd Q_;
 
-  // measurement matrix
+  // Laser measurement mapping matrix
   MatrixXd H_;
 
-  // measurement covariance matrix
-  MatrixXd R_;
+  // Laser measurement covariance matrix
+  MatrixXd R_Laser_;
+
+  // Radar measurement covariance matrix
+  MatrixXd R_Radar_;
+
+
+  float noise_ax = 1.0;
+
+  float noise_ay = 1.0;
+
+  Tools tools;
 
   /**
    * Constructor

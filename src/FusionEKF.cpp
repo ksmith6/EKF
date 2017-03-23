@@ -21,27 +21,35 @@ FusionEKF::FusionEKF() {
   R_radar_ = MatrixXd(3, 3);
   H_laser_ = MatrixXd(2, 4);
   Hj_ = MatrixXd(3, 4);
+  MatrixXd H_in = MatrixXd(2,4);
+  H_in << 1, 0, 0, 0,
+          0, 1, 0, 0;
 
-  VectorXd x_in << VectorXd(4);
+  VectorXd x_in = VectorXd(4);
   MatrixXd P_in = MatrixXd(4,4);
   MatrixXd F_in = MatrixXd(4,4);
-  ekf_.Init(x_in, P_in, F_in, H_in, R_in, Q_in);
+  F_in << 1, 0, 0, 0,
+          0, 1, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1;
+  MatrixXd Q_in = MatrixXd(4,4);
+  ekf_.Init(x_in, P_in, F_in, H_in, R_laser_, Q_in);
 
   // Initialize the Measurement Noise Covariance (R) for the RADAR measurements.
-  ekf_.R_radar_ = MatrixXd(3,3);
+  ekf_.R_Radar_ = MatrixXd(3,3);
 
   // TODO - TUNING PARAMETERS
   const float RANGE_VAR = 1;
   const float BEARING_VAR = 0.1;
   const float RANGERATE_VAR = 1;
-  ekf_.R_radar_(0,0) = RANGE_VAR;
-  ekf_.R_radar_(1,1) = BEARING_VAR;
-  ekf_.R_radar_(2,2) = RANGERATE_VAR;
+  ekf_.R_Radar_(0,0) = RANGE_VAR;
+  ekf_.R_Radar_(1,1) = BEARING_VAR;
+  ekf_.R_Radar_(2,2) = RANGERATE_VAR;
 
   // Initialize the Measurement Noise Covariance (R) for the LASER measurements
   const float LASER_VAR = 0.0225;
-  ekf_.R_laser_ = MatrixXd(2,2);
-  ekf_.R_laser_ <<  LASER_VAR, 0, 0, LASER_VAR;
+  ekf_.R_Laser_ = MatrixXd(2,2);
+  ekf_.R_Laser_ <<  LASER_VAR, 0, 0, LASER_VAR;
 }
 
 /**
@@ -61,10 +69,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       * Remember: you'll need to convert radar from polar to cartesian coordinates.
     */
     // first measurement
-    cout << "EKF: " << endl;
-    ekf_.x_ = VectorXd(4);
-    ekf_.x_ << 1, 1, 1, 1;
+    cout << "=========== FILTER INITIALIZATION ============ " << endl;
 
+    cout << "Initializing filter with";
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       /**
       Convert radar from polar to cartesian coordinates and initialize state.
@@ -79,6 +86,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       float vx = rangeRate * cos(bearing);
       float vy = rangeRate * sin(bearing);
       ekf_.x_ << px, py, vx, vy;
+      cout << " Radar measurement." << endl;
 
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
@@ -93,26 +101,31 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
       // Initialize the states with the first laser measurement.
       ekf_.x_ << px, py, vx, vy;
+      cout << " Laser measurement." << endl;
 
-      // Initialize the covariance matrix
-      pVar = 10;  // Position Variance
-      vVar = 100; // Velocity Variance
-
-      // TODO: Change pVar to measurement variance for position & velocity.
-      ekf_.P_ << pVar,    0,    0,    0
-               0,     pVar,   0,    0, 
-               0,     0,    vVar,  0,
-               0,     0,    0,    vVar; 
+      
     }
+    // Initialize the covariance matrix
+    float pVar = 10;  // Position Variance
+    float vVar = 100; // Velocity Variance
+
+    // TODO: Change pVar to measurement variance for position & velocity.
+    ekf_.P_ << pVar, 0, 0, 0,
+             0, pVar, 0, 0, 
+             0, 0, vVar, 0,
+             0, 0, 0, vVar; 
 
      
 
+    // Save off the initial measurement time-step as the "previous"
+    previous_timestamp_ = measurement_pack.timestamp_;
 
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
     
   } else {
+
     /*
     NOT the first time-step (GENERAL CASE).  
     In this case, perform a state update from the previous state estimate 
@@ -125,6 +138,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       * Update the process noise covariance matrix.
      ****************************************************************************/
 
+    cout << "Filter Already Initialized" << endl;
+
+    cout << "     <------------- PREDICTION ----------------->" << endl;
     // Compute elapsed time from previous state estimate.
     float dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;  //dt - expressed in seconds
     previous_timestamp_ = measurement_pack.timestamp_;
@@ -132,6 +148,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     /* Update the time-dependent elements of the State Transition Matrix 
      (F) to reflect the updated elapsed time. 
      */
+    cout << "Updating F (STM)" << endl;
+    cout << "dt = " << dt << endl;
     ekf_.F_(0,2) = dt;
     ekf_.F_(1,3) = dt;
 
@@ -144,6 +162,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     float qx = ekf_.noise_ax;
     float qy = ekf_.noise_ay;
 
+    cout << "Updating Q" << endl;
     // Update the process noise covariance matrix, Q.
     ekf_.Q_ = MatrixXd(4, 4);
     ekf_.Q_ <<  dt_4/4*qx,  0,          dt_3/2*qx,  0,
@@ -151,27 +170,30 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
                 dt_3/2*qx,  0,          dt_2*qx,    0,
                 0,          dt_3/2*qy,  0,           dt_2*qy;
 
+    cout << "predict()";
     // Propagate the state to the current time.
     ekf_.Predict();
-
+    cout << "...complete" << endl;
     /*****************************************************************************
      *  Update
      ****************************************************************************/
 
     /**
-     TODO:
        * Use the sensor type to perform the update step.
        * Update the state and covariance matrices.
      */
-
+    cout << "    <------------- MEASUREMENT UPDATE ----------------->" << endl;
+    cout << "Meas Update with ";
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       // Radar updates - process with EKF logic due to nonlinearity of measurements.
-
+      cout << "Radar";
       ekf_.UpdateEKF(measurement_pack.raw_measurements_);
     } else {
       // Laser updates - linear updates
+      cout << "Laser";
       ekf_.Update(measurement_pack.raw_measurements_);
     }
+    cout << "...complete" << endl;
   }
 
   
