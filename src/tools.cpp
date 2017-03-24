@@ -4,6 +4,8 @@
 using Eigen::VectorXd;
 using Eigen::MatrixXd;
 using std::vector;
+using std::cout;
+using std::endl;
 
 Tools::Tools() {}
 
@@ -60,8 +62,13 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
   float c3 = (c1*c2);
 
   //check division by zero
-  if(fabs(c1) < 0.0001){
+  if(fabs(c1) < 0.0000001){
   	cout << "CalculateJacobian () - Error - Division by Zero" << endl;
+    float big = 1e15;
+    Hj << big, big, 0, 0,
+          -big, big, 0, 0,
+          big, big, big, big;
+
   	return Hj;
   }
 

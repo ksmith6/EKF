@@ -22,18 +22,21 @@ public:
   Eigen::MatrixXd Q_;
 
   // Laser measurement mapping matrix
-  Eigen:MatrixXd H_;
+  Eigen::MatrixXd H_;
 
   // Laser measurement covariance matrix
-  Eigen:MatrixXd R_Laser_;
+  Eigen::MatrixXd R_Laser_;
 
   // Radar measurement covariance matrix
-  Eigen:MatrixXd R_Radar_;
+  Eigen::MatrixXd R_Radar_;
 
 
   float noise_ax = 9.0;
 
   float noise_ay = 9.0;
+
+  bool Debug;
+
 
   Tools tools;
 
