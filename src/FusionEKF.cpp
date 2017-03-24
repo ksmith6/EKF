@@ -21,6 +21,7 @@ FusionEKF::FusionEKF() {
   R_radar_ = MatrixXd(3, 3);
   H_laser_ = MatrixXd(2, 4);
   Hj_ = MatrixXd(3, 4);
+  
   MatrixXd H_in = MatrixXd(2,4);
   H_in << 1, 0, 0, 0,
           0, 1, 0, 0;
@@ -42,14 +43,15 @@ FusionEKF::FusionEKF() {
   const float RANGE_VAR = 1;
   const float BEARING_VAR = 0.1;
   const float RANGERATE_VAR = 1;
-  ekf_.R_Radar_(0,0) = RANGE_VAR;
-  ekf_.R_Radar_(1,1) = BEARING_VAR;
-  ekf_.R_Radar_(2,2) = RANGERATE_VAR;
+  ekf_.R_Radar_(0,0) = 0.09;
+  ekf_.R_Radar_(1,1) = 0.0009;
+  ekf_.R_Radar_(2,2) = 0.09;
 
   // Initialize the Measurement Noise Covariance (R) for the LASER measurements
   const float LASER_VAR = 0.0225;
   ekf_.R_Laser_ = MatrixXd(2,2);
   ekf_.R_Laser_ <<  LASER_VAR, 0, 0, LASER_VAR;
+
 }
 
 /**
@@ -58,6 +60,8 @@ FusionEKF::FusionEKF() {
 FusionEKF::~FusionEKF() {}
 
 void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
+
+
   /*****************************************************************************
    *  Initialization
    ****************************************************************************/
@@ -109,11 +113,21 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     float pVar = 10;  // Position Variance
     float vVar = 100; // Velocity Variance
 
+<<<<<<< HEAD
     // TODO: Change pVar to measurement variance for position & velocity.
     ekf_.P_ << pVar, 0, 0, 0,
              0, pVar, 0, 0, 
              0, 0, vVar, 0,
              0, 0, 0, vVar; 
+=======
+  /**
+   TODO:
+     * Update the state transition matrix F according to the new elapsed time.
+      - Time is measured in seconds.
+     * Update the process noise covariance matrix.
+     * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
+   */
+>>>>>>> 64ac8dd0a10f76ce653552400af225ce0c893441
 
      
 
