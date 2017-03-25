@@ -25,7 +25,7 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
   R_Laser_ << 0,0,0,0;
   R_Radar_ = MatrixXd(3,3);
   R_Radar_ << 0,0,0,0,0,0,0,0,0;
-  Debug = true;
+  Debug = false;
 
 }
 
