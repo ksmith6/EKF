@@ -18,7 +18,9 @@ FusionEKF::FusionEKF() {
 
   // initializing matrices
   R_laser_ = MatrixXd(2, 2);
+  R_laser_ << 0,0,0,0;
   R_radar_ = MatrixXd(3, 3);
+
   H_laser_ = MatrixXd(2, 4);
   Hj_ = MatrixXd(3, 4);
 
@@ -29,21 +31,21 @@ FusionEKF::FusionEKF() {
   VectorXd x_in = VectorXd(4);
   x_in << 0.1,0.1,0.1,0.1;
   MatrixXd P_in = MatrixXd(4,4);
+  P_in << 0, 0, 0, 0,
+          0, 0, 0, 0,
+          0, 0, 0, 0,
+          0, 0, 0, 0;
   MatrixXd F_in = MatrixXd(4,4);
   F_in << 1, 0, 0, 0,
           0, 1, 0, 0,
           0, 0, 1, 0,
           0, 0, 0, 1;
   MatrixXd Q_in = MatrixXd(4,4);
+  Q_in << 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0;
   ekf_.Init(x_in, P_in, F_in, H_in, R_laser_, Q_in);
 
   // Initialize the Measurement Noise Covariance (R) for the RADAR measurements.
   ekf_.R_Radar_ = MatrixXd(3,3);
-
-  // TODO - TUNING PARAMETERS
-  const float RANGE_VAR = 1;
-  const float BEARING_VAR = 0.1;
-  const float RANGERATE_VAR = 1;
   ekf_.R_Radar_(0,0) = 0.09;
   ekf_.R_Radar_(1,1) = 0.0009;
   ekf_.R_Radar_(2,2) = 0.09;
@@ -88,8 +90,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       // TODO - Convert polar measuremnts to Cartesian coordinates
       float px = range * cos(bearing);
       float py = range * sin(bearing);
-      float vx = 0; // rangeRate * cos(bearing);
-      float vy = 0; // rangeRate * sin(bearing);
+      float vx = rangeRate * cos(bearing);
+      float vy = rangeRate * sin(bearing);
       ekf_.x_ << px, py, vx, vy;
       cout << " Radar measurement." << endl;
 
@@ -111,7 +113,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       
     }
     // Initialize the covariance matrix
-    float pVar = 100;  // Position Variance
+    float pVar = 1000;  // Position Variance
     float vVar = 100; // Velocity Variance
 
     // TODO: Change pVar to measurement variance for position & velocity.
@@ -156,7 +158,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
      (F) to reflect the updated elapsed time. 
      */
     if (ekf_.Debug) {
-      cout << "Updating F (STM)" << endl;
       cout << "dt = " << dt << endl;
     }
     ekf_.F_(0,2) = dt;
@@ -171,9 +172,6 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     float qx = ekf_.noise_ax;
     float qy = ekf_.noise_ay;
 
-    if (ekf_.Debug) {
-      cout << "Updating Q" << endl;
-    }
     // Update the process noise covariance matrix, Q.
     ekf_.Q_ = MatrixXd(4, 4);
     ekf_.Q_ <<  dt_4/4*qx,  0,          dt_3/2*qx,  0,
@@ -182,14 +180,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
                 0,          dt_3/2*qy,  0,           dt_2*qy;
 
     
-    if (ekf_.Debug) {
-      cout << "predict()";
-    }
     // Propagate the state to the current time.
     ekf_.Predict();
-    if (ekf_.Debug) {
-      cout << "...complete" << endl;
-    }
+
     /*****************************************************************************
      *  Update
      ****************************************************************************/
@@ -207,13 +200,25 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       if (ekf_.Debug) {
         cout << "Radar" << endl;
       }
-      ekf_.UpdateEKF(measurement_pack.raw_measurements_);
+      // Check for zero measurements
+      bool validMeas = measurement_pack.raw_measurements_[0] != 0.0 && measurement_pack.raw_measurements_[1] != 0.0 && measurement_pack.raw_measurements_[2] != 0.0;
+      if (validMeas) {
+        ekf_.UpdateEKF(measurement_pack.raw_measurements_);  
+      } else if (ekf_.Debug) {
+        cout << "Invalid Radar measurement." << endl;
+      }
+      
     } else {
       // Laser updates - linear updates
       if (ekf_.Debug) {
         cout << "Laser";
       }
-      ekf_.Update(measurement_pack.raw_measurements_);
+      bool validMeas = measurement_pack.raw_measurements_[0] != 0.0 && measurement_pack.raw_measurements_[1] != 0.0; 
+      if (validMeas) {
+        ekf_.Update(measurement_pack.raw_measurements_);
+      } else if (ekf_.Debug) {
+        cout << "Invalid Laser measurement." << endl;
+      }
     }
     if (ekf_.Debug) {
       cout << "...complete" << endl;

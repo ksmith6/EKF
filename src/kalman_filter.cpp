@@ -18,9 +18,13 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
   // R_ = R_in; - deprecated
   Q_ = Q_in;
 
+
+
   // TODO - Re-do Init() to accept R_laser_ and R_radar_.
   R_Laser_ = MatrixXd(2,2);
+  R_Laser_ << 0,0,0,0;
   R_Radar_ = MatrixXd(3,3);
+  R_Radar_ << 0,0,0,0,0,0,0,0,0;
   Debug = true;
 
 }
@@ -158,12 +162,20 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   }
   
 
-  VectorXd z_pred = Hj * x_;
-  /*
+  // VectorXd z_pred = Hj * x_;
+  
   VectorXd z_pred = VectorXd(3); // = Hj * x_;
-  float rangeRate = x_[0]*x_[2] + x_[1]*x_[3] / sqrt(x_[0]*x_[0] + x_[1]*x_[1]);
-  z_pred << sqrt(x_[0]*x_[0] + x_[1]*x_[1]), atan2(x_[1], x_[0]), rangeRate;
-  */
+
+  float rMag = sqrt(x_[0]*x_[0] + x_[1]*x_[1]);
+  float rangeRate;
+  if (rMag < 0.00001) {
+    rangeRate = 0.0;
+  } else {
+    rangeRate = (x_[0]*x_[2] + x_[1]*x_[3]) / rMag;
+  }
+  
+  z_pred << rMag, atan2(x_[1], x_[0]), rangeRate;
+  
   if (Debug) {
     cout << "z_pred= " << endl;
     cout << z_pred << endl;
